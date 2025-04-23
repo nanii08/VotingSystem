@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Voting System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f5; }
+        .sidebar {
+            width: 280px; height: 100vh; background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: white; position: fixed; left: 0; top: 0; padding: 20px; overflow-y: auto;
+        }
+        .main-content { margin-left: 280px; padding: 20px; }
+        .nav-link {
+            color: white; padding: 12px 15px; display: block; text-decoration: none;
+            margin-bottom: 5px; border-radius: 8px; transition: all 0.3s ease;
+        }
+        .nav-link:hover { background: rgba(255,255,255,0.2); transform: translateX(5px); }
+        .nav-link.active { background: rgba(255,255,255,0.3); }
+        .card { box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-radius: 10px; }
+        .stat-card, .poll-card {
+            background: white; padding: 20px; border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover, .poll-card:hover { transform: translateY(-5px); }
+        .modal {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;
+        }
+        .modal-content {
+            background: white; margin: 50px auto; padding: 20px;
+            width: 80%; max-width: 600px; border-radius: 10px;
+        }
+        .section { display: none; }
+        .section.active { display: block; }
+        .auth-container {
+            max-width: 400px; margin: 50px auto; padding: 30px;
+            background: white; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .activity-item { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .progress { height: 20px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <!-- Login Form -->
+    <div id="loginForm" class="container mt-5">
+        <div class="auth-container">
+            <h3 class="text-center mb-4">E-Voting System Login</h3>
+            <form onsubmit="return handleLogin(event)">
+                <div class="mb-3">
+                    <label class="form-label">Mobile Number</label>
+                    <input type="tel" class="form-control" id="loginMobile" pattern="[0-9]{10}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mb-3">Login</button>
+                <button type="button" class="btn btn-link w-100" onclick="showRegister()">New user? Register</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Registration Form -->
+    <div id="registerForm" class="container mt-5" style="display: none;">
+        <div class="auth-container">
+            <h3 class="text-center mb-4">Register for E-Voting</h3>
+            <form onsubmit="return handleRegistration(event)">
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="regName" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Mobile Number</label>
+                    <input type="tel" class="form-control" id="regMobile" pattern="[0-9]{10}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="regEmail" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" id="regPassword" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mb-3">Register</button>
+                <button type="button" class="btn btn-link w-100" onclick="showLogin()">Already registered? Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" style="display: none;">
+        <div class="sidebar">
+            <h2 class="mb-4">E-Voting System</h2>
+            <nav>
+                <a href="#" class="nav-link active" onclick="showSection('overview')">
+                    <i class="fas fa-home"></i> Overview
+                </a>
+                <a href="#" class="nav-link" onclick="showSection('polls')">
+                    <i class="fas fa-poll"></i> Polls
+                </a>
+                <a href="#" class="nav-link" onclick="showSection('voters')">
+                    <i class="fas fa-users"></i> Voters
+                </a>
+                <a href="#" class="nav-link" onclick="showSection('results')">
+                    <i class="fas fa-chart-bar"></i> Results
+                </a>
+                <a href="#" class="nav-link" onclick="showSection('settings')">
+                    <i class="fas fa-cog"></i> Settings
+                </a>
+                <div class="mt-4">
+                    <h5 class="text-white mb-3">Recent Activities</h5>
+                    <div id="sidebarActivities"></div>
+                </div>
+                <a href="#" class="nav-link mt-3" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </nav>
+        </div>
+
+        <div class="main-content">
+            <!-- Overview Section -->
+            <div id="overview" class="section active">
+                <h2 class="mb-4">Dashboard Overview</h2>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <h3>Total Polls</h3>
+                            <div id="totalPolls" class="h2">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <h3>Active Polls</h3>
+                            <div id="activePolls" class="h2">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <h3>Total Voters</h3>
+                            <div id="totalVoters" class="h2">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <h3>Voter Turnout</h3>
+                            <div id="voterTurnout" class="h2">0%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="adminActions" class="mt-4" style="display: none;">
+                    <button class="btn btn-primary" onclick="showCreatePollModal()">Create New Poll</button>
+                </div>
+
+                <div class="mt-4">
+                    <h3>Recent Polls</h3>
+                    <div id="recentPolls"></div>
+                </div>
+            </div>
+
+            <!-- Polls Section -->
+            <div id="polls" class="section">
+                <h2 class="mb-4">All Polls</h2>
+                <div class="row" id="allPolls"></div>
+            </div>
+
+            <!-- Voters Section -->
+            <div id="voters" class="section">
+                <h2 class="mb-4">Registered Voters</h2>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Mobile</th>
+                                <th>Role</th>
+                            </tr>
+                        </thead>
+                        <tbody id="votersList"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="section">
+                <h2 class="mb-4">Poll Results</h2>
+                <div id="pollResults"></div>
+            </div>
+
+            <!-- Settings Section -->
+            <div id="settings" class="section">
+                <h2 class="mb-4">Settings</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <form onsubmit="return updateProfile(event)">
+                            <div class="mb-3">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-control" id="updateName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" id="updateEmail" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Current Password</label>
+                                <input type="password" class="form-control" id="currentPassword" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">New Password (optional)</label>
+                                <input type="password" class="form-control" id="newPassword">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Update Profile</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Poll Modal -->
+            <div id="createPollModal" class="modal">
+                <div class="modal-content">
+                    <h3>Create New Poll</h3>
+                    <form onsubmit="return createPoll(event)">
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-control" id="pollTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="pollDescription" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="datetime-local" class="form-control" id="pollStartDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">End Date</label>
+                            <input type="datetime-local" class="form-control" id="pollEndDate" required>
+                        </div>
+                        <div id="optionsContainer">
+                            <div class="mb-3">
+                                <label class="form-label">Options</label>
+                                <input type="text" class="form-control mb-2" placeholder="Option 1" required>
+                                <input type="text" class="form-control" placeholder="Option 2" required>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="addOption()">Add Option</button>
+                        <button type="submit" class="btn btn-primary float-end">Create</button>
+                        <button type="button" class="btn btn-danger float-end me-2" onclick="closeModal()">Cancel</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Data initialization
+        let currentUser = null;
+        let polls = JSON.parse(localStorage.getItem('polls')) || [];
+        let voters = JSON.parse(localStorage.getItem('voters')) || [
+            { mobile: '0000000000', email: 'admin@admin.com', password: 'admin123', name: 'Admin', role: 'admin' }
+        ];
+        let votes = JSON.parse(localStorage.getItem('votes')) || [];
+        let activities = JSON.parse(localStorage.getItem('activities')) || [];
+
+        // UI Functions
+        const showRegister = () => {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+        };
+
+        const showLogin = () => {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+        };
+
+        const showSection = (sectionId) => {
+            document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(sectionId).style.display = 'block';
+            document.querySelector(`[onclick="showSection('${sectionId}')"]`).classList.add('active');
+
+            if (sectionId === 'polls') loadAllPolls();
+            if (sectionId === 'voters') loadVoters();
+            if (sectionId === 'results') loadResults();
+        };
+
+        const showCreatePollModal = () => document.getElementById('createPollModal').style.display = 'block';
+        const closeModal = () => document.getElementById('createPollModal').style.display = 'none';
+
+        // Authentication Functions
+        const handleLogin = (event) => {
+            event.preventDefault();
+            const mobile = document.getElementById('loginMobile').value;
+            const password = document.getElementById('loginPassword').value;
+            const user = voters.find(v => v.mobile === mobile && v.password === password);
+
+            if (user) {
+                currentUser = user;
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                document.getElementById('adminActions').style.display = user.role === 'admin' ? 'block' : 'none';
+                document.getElementById('updateName').value = user.name;
+                document.getElementById('updateEmail').value = user.email;
+                
+                updateDashboard();
+                updateSidebarActivities();
+                loadRecentPolls();
+                addActivity('Login', `${user.name} logged in`);
+            } else {
+                alert('Invalid credentials');
+            }
+            return false;
+        };
+
+        const handleRegistration = (event) => {
+            event.preventDefault();
+            const mobile = document.getElementById('regMobile').value;
+            const email = document.getElementById('regEmail').value;
+            const name = document.getElementById('regName').value;
+
+            if (voters.some(v => v.mobile === mobile)) {
+                alert('Mobile number already registered');
+                return false;
+            }
+
+            if (voters.some(v => v.email === email)) {
+                alert('Email already registered');
+                return false;
+            }
+
+            voters.push({
+                name,
+                mobile,
+                email,
+                password: document.getElementById('regPassword').value,
+                role: 'voter'
+            });
+
+            localStorage.setItem('voters', JSON.stringify(voters));
+            addActivity('Registration', `New voter registered: ${name}`);
+            alert('Registration successful! Please login.');
+            showLogin();
+            return false;
+        };
+
+        const updateProfile = (event) => {
+            event.preventDefault();
+            const name = document.getElementById('updateName').value;
+            const email = document.getElementById('updateEmail').value;
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+
+            const user = voters.find(v => v.mobile === currentUser.mobile);
+            if (user.password !== currentPassword) {
+                alert('Current password is incorrect');
+                return false;
+            }
+
+            user.name = name;
+            user.email = email;
+            if (newPassword) user.password = newPassword;
+
+            localStorage.setItem('voters', JSON.stringify(voters));
+            currentUser = user;
+            addActivity('Profile Update', `${user.name} updated their profile`);
+            alert('Profile updated successfully');
+            return false;
+        };
+
+        const logout = () => {
+            if (confirm('Are you sure you want to logout?')) {
+                addActivity('Logout', `${currentUser.name} logged out`);
+                currentUser = null;
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('dashboard').style.display = 'none';
+                showLogin();
+            }
+        };
+
+        // Poll Management Functions
+        const createPoll = (event) => {
+            event.preventDefault();
+            const newPoll = {
+                id: Date.now().toString(),
+                title: document.getElementById('pollTitle').value,
+                description: document.getElementById('pollDescription').value,
+                startDate: document.getElementById('pollStartDate').value,
+                endDate: document.getElementById('pollEndDate').value,
+                options: Array.from(document.querySelectorAll('#optionsContainer input')).map(input => ({
+                    text: input.value,
+                    votes: 0
+                })),
+                createdBy: currentUser.mobile
+            };
+
+            polls.push(newPoll);
+            localStorage.setItem('polls', JSON.stringify(polls));
+            addActivity('Poll Created', `New poll created: ${newPoll.title}`);
+            closeModal();
+            updateDashboard();
+            loadRecentPolls();
+            return false;
+        };
+
+        const addOption = () => {
+            const container = document.getElementById('optionsContainer');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control mb-2';
+            input.placeholder = `Option ${container.children.length + 1}`;
+            input.required = true;
+            container.appendChild(input);
+        };
+
+        const deletePoll = (pollId) => {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert('Only administrators can delete polls');
+                return;
+            }
+
+            if (confirm('Are you sure you want to delete this poll?')) {
+                polls = polls.filter(poll => poll.id !== pollId);
+                votes = votes.filter(vote => vote.pollId !== pollId);
+                localStorage.setItem('polls', JSON.stringify(polls));
+                localStorage.setItem('votes', JSON.stringify(votes));
+                addActivity('Poll Deleted', `Poll ID ${pollId} was deleted`);
+                updateDashboard();
+                loadRecentPolls();
+                loadResults();
+            }
+        };
+
+        const votePoll = (pollId) => {
+            const poll = polls.find(p => p.id === pollId);
+            if (!poll) return;
+
+            if (votes.some(v => v.pollId === pollId && v.voterId === currentUser.mobile)) {
+                alert('You have already voted in this poll');
+                return;
+            }
+
+            const now = new Date();
+            const startDate = new Date(poll.startDate);
+            const endDate = new Date(poll.endDate);
+            if (now < startDate || now > endDate) {
+                alert('This poll is not currently active');
+                return;
+            }
+
+            const voteModal = document.createElement('div');
+            voteModal.className = 'modal';
+            voteModal.style.display = 'block';
+            voteModal.innerHTML = `
+                <div class="modal-content">
+                    <h3>Vote: ${poll.title}</h3>
+                    <p>${poll.description}</p>
+                    <form id="voteForm">
+                        ${poll.options.map((option, index) => `
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="vote" 
+                                    value="${index}" id="option${index}" required>
+                                <label class="form-check-label" for="option${index}">
+                                    ${option.text}
+                                </label>
+                            </div>
+                        `).join('')}
+                        <button type="submit" class="btn btn-primary float-end">Submit Vote</button>
+                        <button type="button" class="btn btn-secondary float-end me-2" 
+                            onclick="this.closest('.modal').remove()">Cancel</button>
+                    </form>
+                </div>
+            `;
+
+            document.body.appendChild(voteModal);
+
+            document.getElementById('voteForm').onsubmit = function(e) {
+                e.preventDefault();
+                const selected = document.querySelector('input[name="vote"]:checked');
+                if (!selected) {
+                    alert('Please select an option');
+                    return false;
+                }
+
+                poll.options[selected.value].votes++;
+                votes.push({
+                    pollId: poll.id,
+                    voterId: currentUser.mobile,
+                    optionIndex: parseInt(selected.value),
+                    timestamp: new Date().toISOString()
+                });
+
+                localStorage.setItem('polls', JSON.stringify(polls));
+                localStorage.setItem('votes', JSON.stringify(votes));
+                addActivity('Vote Cast', `${currentUser.name} voted in poll: ${poll.title}`);
+                
+                voteModal.remove();
+                updateDashboard();
+                loadAllPolls();
+                loadResults();
+                return false;
+            };
+        };
+
+        // Data Display Functions
+        const updateDashboard = () => {
+            const now = new Date();
+            const activePolls = polls.filter(poll => {
+                const startDate = new Date(poll.startDate);
+                const endDate = new Date(poll.endDate);
+                return startDate <= now && endDate >= now;
+            });
+
+            document.getElementById('totalPolls').textContent = polls.length;
+            document.getElementById('activePolls').textContent = activePolls.length;
+            document.getElementById('totalVoters').textContent = voters.length - 1;
+            
+            const totalPossibleVotes = polls.length * (voters.length - 1);
+            const turnout = totalPossibleVotes > 0 ? 
+                Math.round((votes.length / totalPossibleVotes) * 100) : 0;
+            document.getElementById('voterTurnout').textContent = turnout + '%';
+        };
+
+        const updateSidebarActivities = () => {
+            const recentActivities = activities.slice(-5).reverse();
+            document.getElementById('sidebarActivities').innerHTML = recentActivities.map(activity => `
+                <div class="activity-item">
+                    <strong>${activity.type}</strong><br>
+                    <small class="text-white-50">${activity.description}</small>
+                </div>
+            `).join('') || '<div class="activity-item">No recent activities</div>';
+        };
+
+        const addActivity = (type, description) => {
+            activities.push({
+                type,
+                description,
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem('activities', JSON.stringify(activities));
+            updateSidebarActivities();
+        };
+
+        const loadRecentPolls = () => {
+            const recentPolls = polls.slice(-5).reverse();
+            document.getElementById('recentPolls').innerHTML = recentPolls.map(poll => `
+                <div class="poll-card">
+                    <h4>${poll.title}</h4>
+                    <p>${poll.description}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small>Created: ${new Date(poll.startDate).toLocaleDateString()}</small>
+                        <button class="btn btn-primary btn-sm" onclick="votePoll('${poll.id}')">Vote</button>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-muted">No polls available</p>';
+        };
+
+        const loadAllPolls = () => {
+            document.getElementById('allPolls').innerHTML = polls.map(poll => `
+                <div class="col-md-6 mb-4">
+                    <div class="poll-card">
+                        <h4>${poll.title}</h4>
+                        <p>${poll.description}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small>Start: ${new Date(poll.startDate).toLocaleDateString()}</small>
+                            <small>End: ${new Date(poll.endDate).toLocaleDateString()}</small>
+                        </div>
+                        <div class="mt-3">
+                            ${!votes.some(v => v.pollId === poll.id && v.voterId === currentUser.mobile) ?
+                                `<button class="btn btn-primary btn-sm" onclick="votePoll('${poll.id}')">Vote</button>` :
+                                `<span class="badge bg-success">Voted</span>`
+                            }
+                            ${currentUser.role === 'admin' ? 
+                                `<button class="btn btn-danger btn-sm float-end" onclick="deletePoll('${poll.id}')">Delete</button>` : 
+                                ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('') || '<div class="col-12"><p class="text-muted">No polls available</p></div>';
+        };
+
+        const loadVoters = () => {
+            document.getElementById('votersList').innerHTML = voters.map(voter => `
+                <tr>
+                    <td>${voter.name}</td>
+                    <td>${voter.email}</td>
+                    <td>${voter.mobile}</td>
+                    <td><span class="badge bg-${voter.role === 'admin' ? 'danger' : 'primary'}">${voter.role}</span></td>
+                </tr>
+            `).join('');
+        };
+
+        const loadResults = () => {
+            document.getElementById('pollResults').innerHTML = polls.map(poll => {
+                const totalVotes = poll.options.reduce((sum, opt) => sum + opt.votes, 0);
+                const optionsHtml = poll.options.map(option => {
+                    const percentage = totalVotes > 0 ? (option.votes / totalVotes * 100).toFixed(1) : 0;
+                    return `
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>${option.text}</span>
+                                <span>${option.votes} votes (${percentage}%)</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" 
+                                    style="width: ${percentage}%" 
+                                    aria-valuenow="${percentage}" 
+                                    aria-valuemin="0" 
+                                    aria-valuemax="100">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="poll-card mb-4">
+                        <h4>${poll.title}</h4>
+                        <p>${poll.description}</p>
+                        <div class="mt-4">${optionsHtml}</div>
+                        <div class="mt-3 text-muted">
+                            <small>Total Votes: ${totalVotes}</small>
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<p class="text-muted">No poll results available</p>';
+        };
+
+        // Initialize application
+        window.addEventListener('load', () => {
+            if (currentUser) {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                document.getElementById('adminActions').style.display = 
+                    currentUser.role === 'admin' ? 'block' : 'none';
+                
+                document.getElementById('updateName').value = currentUser.name;
+                document.getElementById('updateEmail').value = currentUser.email;
+                
+                updateDashboard();
+                updateSidebarActivities();
+                loadRecentPolls();
+            }
+        });
+
+        // Modal close handler
+        window.onclick = event => {
+            if (event.target.className === 'modal') {
+                closeModal();
+            }
+        };
+    </script>
+</body>
+</html>
